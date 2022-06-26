@@ -1,10 +1,8 @@
 class MutableState<T> implements MutableState<T> {
+  private subscribers: Array<{ id: number; callback: (latest: T) => void }> =
+    [];
 
-  private subscribers: Array<
-    { id: number; callback: (latest: T) => void; }
-  > = [];
-
-  constructor(private current: T) { }
+  constructor(private current: T) {}
 
   get() {
     return this.current;
@@ -12,8 +10,7 @@ class MutableState<T> implements MutableState<T> {
 
   set(current: T) {
     this.current = current;
-    this.subscribers
-      .forEach(({ callback }) => callback(this.current));
+    this.subscribers.forEach(({ callback }) => callback(this.current));
   }
 
   subscribe(callback: (latest: T) => void) {
@@ -22,20 +19,19 @@ class MutableState<T> implements MutableState<T> {
 
     return {
       id,
-      unsubscribe: () => this.unsubscribe(id)
+      unsubscribe: () => this.unsubscribe(id),
     };
   }
 
   unsubscribe(id: number) {
     this.subscribers = this.subscribers.filter(
-      subscriber => subscriber.id !== id
+      (subscriber) => subscriber.id !== id
     );
   }
 
   clearSubscribers() {
     this.subscribers = [];
   }
-
 }
 
 function createMutableState<T>(): MutableState<T | undefined>;
