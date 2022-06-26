@@ -2,8 +2,11 @@ import { Story, Meta } from "@storybook/html";
 
 import { Joystick, JoystickProps } from "../components/Joystick";
 import { GamepadPlugin } from "../components/Joystick/plugins/GamepadPlugin";
-import { createListeningElement, modifyElement } from "../utils/createElement";
+import { PointerPlugin } from "../components/Joystick/plugins/PointerPlugin";
+import { h, m } from "../utils/createElement";
 import { createMutableState } from "../utils/createMutableState";
+
+import classes from "./Joystick.stories.module.css";
 
 // More on default export: https://storybook.js.org/docs/html/writing-stories/introduction#default-export
 export default {
@@ -14,55 +17,35 @@ export default {
 // More on component templates: https://storybook.js.org/docs/html/writing-stories/introduction#using-args
 const Template: Story<Partial<JoystickProps>> = ({ ...props }) => {
   document.body.style.padding = "0";
+  const parser = new DOMParser();
   const eventState$ = createMutableState();
 
-  return createListeningElement("div", {
-    style: {
-      height: "100vh",
-      width: "100vw",
-      overflow: "hidden",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    },
+  return h("div", {
+    className: classes.storyRoot,
     children: [
-      createListeningElement(
+      h(
         "code",
-        () => ({
-          children: new DOMParser().parseFromString(
-            JSON.stringify(eventState$.get() ?? {}, undefined, 2)
-              .replace(/\n/g, "<br>")
-              .replace(/ /g, "&nbsp"),
-            "text/html"
-          ).body,
-          style: {
-            height: "3em",
-            position: "absolute",
-            top: "10px",
-            left: "10px",
-            zIndex: "1",
-          },
-        }),
-        { eventState$ }
-      ),
-      createListeningElement("div", {
-        style: {
-          height: "min(100vh, 100vw)",
-          width: "min(100vh, 100vw)",
-          display: "flex",
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "2rem",
+        {
+          className: classes.latestEvent,
         },
-        children: createListeningElement("div", {
-          style: {
-            height: "min(100vh, 100vw)",
-            width: "min(100vh, 100vw)",
-            aspectRatio: "1/1",
-          },
-          children: Joystick(props).elementRef,
-        }),
+        {
+          props: () => ({
+            children: parser.parseFromString(
+              JSON.stringify(eventState$.get() ?? {}, undefined, 2)
+                .replace(/\n/g, "<br>")
+                .replace(/ /g, "&nbsp"),
+              "text/html"
+            ).body,
+          }),
+          deps: { eventState$ },
+        }
+      ),
+      h("div", {
+        className: classes.joystickContainer,
+        children: Joystick({
+          ...props,
+          onMove: (event) => eventState$.set(event),
+        }).elementRef,
       }),
     ],
   });
@@ -73,34 +56,15 @@ export const Primary = Template.bind({});
 Primary.args = {
   plugins: [
     GamepadPlugin(),
+    PointerPlugin(),
     ({ baseRef, handleRef }) => {
-      modifyElement(baseRef, {
-        style: {
-          borderRadius: "50%",
-          background: "gray",
-        },
+      m(baseRef, {
+        className: classes.styledBase,
       });
-
-      modifyElement(handleRef, {
-        style: {
-          background: "red",
-          width: "25%",
-          height: "25%",
-          borderRadius: "50%",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          transition: "box-shadow 0.3s ease",
-          cursor: "grab",
-        },
-        children: createListeningElement("span", {
-          style: {
-            color: "white",
-            fontWeight: "bold",
-            fontFamily: "arial",
-            userSelect: "none",
-            textAlign: "center",
-          },
+      m(handleRef, {
+        className: classes.styledHandle,
+        children: h("span", {
+          className: classes.handleChild,
           children: document.createTextNode("Drag 🕹 me!"),
         }),
       });

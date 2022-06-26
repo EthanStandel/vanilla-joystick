@@ -1,6 +1,6 @@
 import { Trig } from "../../utils/Trig";
 import { createComponent } from "../../utils/createComponent";
-import { createListeningElement } from "../../utils/createElement";
+import { h } from "../../utils/createElement";
 import {
   createMutableState,
   MutableState,
@@ -12,19 +12,28 @@ export const Joystick = createComponent(
     const offset$ = createMutableState({ x: 0, y: 0 });
     const shouldTransition$ = createMutableState(false);
     const handleState = initialStates.handleState();
-    const handleRef = createListeningElement(
+    const handleRef = h(
       "button",
-      () => ({
-        style: styles.handle(
-          offset$.get().x,
-          offset$.get().y,
-          shouldTransition$.get() && !props.disableResetAnimation,
-          props.resetAnimation
-        ),
-      }),
-      { offset$, shouldTransition$ }
+      { style: { touchAction: "none" } },
+      {
+        props: () => ({
+          style: {
+            transform: `translate(${offset$.get().x}px, ${offset$.get().y}px)`,
+          },
+        }),
+        deps: { offset$ },
+      },
+      {
+        props: () => ({
+          style:
+            shouldTransition$.get() && !props.disableResetAnimation
+              ? { transition: `all ${props.resetAnimation}` }
+              : { transition: "none" },
+        }),
+        deps: { shouldTransition$ },
+      }
     );
-    const baseRef = createListeningElement("div", {
+    const baseRef = h("div", {
       children: handleRef,
       style: styles.base,
     });
@@ -230,51 +239,51 @@ export type JoystickMoveEvent = {
 /**
  * A function which may be used to modify the props and state of the Joystick.
  */
-export type JoystickPlugin = (
-  pluginProps: {
-    /**
-     * The function that should be called when a controlling event wants the handle to move and fire off an `JoystickMoveEvent`.
-     */
-    handleHandleMove: (xOffset: number, yOffset: number) => void;
-    /**
-     * A getter for the radius of the "base" element.
-     */
-    getRadius: () => number;
-    /**
-     * A signal accessor for the currently rendered true xOffset of the handle.
-     */
-    states: {
-      /**
-       * A signal accessor for the currently rendered true offset of the handle.
-       */
-      offset$: MutableState<{ x: number; y: number }>;
-      /**
-       * A signal accessor for the enabling boolean for the return-to-center transition.
-       */
-      shouldTransition$: MutableState<boolean>;
-    };
-    /**
-     * The indexed order this plugin is being added to the array.
-     */
-    pluginIndex: number;
-    /**
-     * A non-observed state container. When dragging the handle, you should set `handleState.pluginDragging[pluginIndex] = true` and when the handle is "let go of," you should set that to false. When done dragging, always set `handleState.initialOffsets = { x: 0, y: 0 }` if it was modified.
-     */
-    handleState: {
-      pluginDragging: Array<boolean>;
-      initialOffsets: { x: number; y: number };
-    };
-    /**
-     * A ref for the handle element.
-     */
-    handleRef: HTMLButtonElement;
+export type JoystickPlugin = (pluginProps: JoystickPluginProps) => void;
 
+export type JoystickPluginProps = {
+  /**
+   * The function that should be called when a controlling event wants the handle to move and fire off an `JoystickMoveEvent`.
+   */
+  handleHandleMove: (xOffset: number, yOffset: number) => void;
+  /**
+   * A getter for the radius of the "base" element.
+   */
+  getRadius: () => number;
+  /**
+   * A signal accessor for the currently rendered true xOffset of the handle.
+   */
+  states: {
     /**
-     * A ref for the base element.
+     * A signal accessor for the currently rendered true offset of the handle.
      */
-    baseRef: HTMLDivElement;
-  } & JoystickProps
-) => void;
+    offset$: MutableState<{ x: number; y: number }>;
+    /**
+     * A signal accessor for the enabling boolean for the return-to-center transition.
+     */
+    shouldTransition$: MutableState<boolean>;
+  };
+  /**
+   * The indexed order this plugin is being added to the array.
+   */
+  pluginIndex: number;
+  /**
+   * A non-observed state container. When dragging the handle, you should set `handleState.pluginDragging[pluginIndex] = true` and when the handle is "let go of," you should set that to false. When done dragging, always set `handleState.initialOffsets = { x: 0, y: 0 }` if it was modified.
+   */
+  handleState: {
+    pluginDragging: Array<boolean>;
+    initialOffsets: { x: number; y: number };
+  };
+  /**
+   * A ref for the handle element.
+   */
+  handleRef: HTMLButtonElement;
+
+  /**
+   * A ref for the base element.
+   */
+  baseRef: HTMLDivElement;
+} & JoystickProps;
 
 export const initialStates = {
   handleState: () => ({
@@ -290,18 +299,24 @@ export const initialStates = {
     pressure: { pixels: 0, percentage: 0 },
   }),
   mergePropsWithDefaults: (props: Partial<JoystickProps>): JoystickProps =>
-    Object.assign(props, {
-      onMove: props.onMove ?? ((() => undefined) as JoystickProps["onMove"]),
-      disableResetAnimation: props.disableResetAnimation ?? false,
-      disabled: props.disabled ?? false,
-      disableX: props.disableX ?? false,
-      disableY: props.disableY ?? false,
-      boundingModel: props.boundingModel ?? "center",
-      boundaryModifier: props.boundaryModifier ?? 0,
-      throttleEventsBy: props.throttleEventsBy ?? 0,
-      resetAnimation: props.resetAnimation ?? ".2s ease",
-      plugins: props.plugins ?? [],
-    }),
+    Object.assign(
+      props,
+      Object.assign(
+        {
+          onMove: (() => undefined) as JoystickProps["onMove"],
+          disableResetAnimation: props.disableResetAnimation ?? false,
+          disabled: false,
+          disableX: false,
+          disableY: false,
+          boundingModel: "center",
+          boundaryModifier: 0,
+          throttleEventsBy: 0,
+          resetAnimation: ".2s ease",
+          plugins: [],
+        },
+        props
+      )
+    ),
 };
 
 const styles = {
@@ -312,16 +327,4 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
   },
-  handle: (
-    x: number,
-    y: number,
-    shouldTransition: boolean,
-    resetAnimation?: string
-  ) => ({
-    touchAction: "none",
-    transform: `translate(${x}px,${y}px)`,
-    ...(shouldTransition
-      ? { transition: `all ${resetAnimation}` }
-      : { transition: "none" }),
-  }),
 };

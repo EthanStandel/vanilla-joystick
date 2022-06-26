@@ -1,0 +1,57 @@
+.storyRoot {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.latestEvent {
+  height: 3em;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+}
+
+.joystickContainer {
+  height: min(100vh, 100vw);
+  width: min(100vh, 100vw);
+  aspect-ratio: 1/1;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.styledBase {
+  border-radius: 50%;
+  background: gray;
+}
+
+.styledHandle {
+  all: unset;
+  background: red;
+  width: 25%;
+  height: 25%;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: box-shadow 0.3s ease;
+  cursor: grab;
+}
+
+.styledHandle:active {
+  cursor: grabbing;
+}
+
+.handleChild {
+  color: white;
+  font-weight: bold;
+  font-family: arial;
+  user-select: none;
+  text-align: center;
+}
